@@ -23,7 +23,7 @@ SEXP covMat_covMan(SEXP fun,      // A cov. kernel with TWO vector args + par
 		   SEXP index,    // Index for grad. INTEGER 0 <= < length(par) 
 		   SEXP rho) {    // An R environment
   
-  int  i, j, k, n, d;   //*icompGrad;
+  int  i, j, k, n, nsquared, d;   //*icompGrad;
   double *rxt = REAL(Xt), *rx1, *rx2, *rCov, *rpar;
   SEXP R_fcall, Cov, x1, x2;
   
@@ -37,6 +37,7 @@ SEXP covMat_covMan(SEXP fun,      // A cov. kernel with TWO vector args + par
   dimXt = getAttrib(Xt, R_DimSymbol);
   d = INTEGER(dimXt)[0];
   n = INTEGER(dimXt)[1];
+  nsquared = n * n;
   //icompGrad[0] = INTEGER(compGrad)[0];
 
 #ifdef DEBUG 
@@ -65,6 +66,8 @@ SEXP covMat_covMan(SEXP fun,      // A cov. kernel with TWO vector args + par
     SEXP dCov, kernValue, dkernValue, attrNm;
     double *rdCov;
     int iindex, npar;
+    int loweridx, upperidx;
+    int rdcovx;
 
     npar = LENGTH(par);
 
@@ -74,7 +77,7 @@ SEXP covMat_covMan(SEXP fun,      // A cov. kernel with TWO vector args + par
 
     iindex = INTEGER(index)[0];
   
-    PROTECT(dCov = allocMatrix(REALSXP, n, n)); //allocate the n x n matrix  
+    PROTECT(dCov = allocMatrix(REALSXP, n, n * ((iindex == -2)?npar:1))); //allocate the n x n matrix  
     PROTECT(kernValue = allocVector(REALSXP, 1));
     PROTECT(dkernValue = allocVector(REALSXP, npar));
     
@@ -87,7 +90,13 @@ SEXP covMat_covMan(SEXP fun,      // A cov. kernel with TWO vector args + par
 #ifdef DEBUG 
     Rprintf("CHECK\n");
 #endif
-
+    if (iindex == -2) {
+      loweridx = 0;
+      upperidx = npar;
+    } else {
+      loweridx = iindex;
+      upperidx = iindex + 1;
+    }
     for (i = 0; i < n; i++) {
       
       for (k = 0; k < d; k++) {
@@ -114,11 +123,13 @@ SEXP covMat_covMan(SEXP fun,      // A cov. kernel with TWO vector args + par
 
 	//Rprintf("Long attr. %d\n", LENGTH(dkernValue));
 	//Rprintf("Elt 1 %7.3f\n", REAL(dkernValue)[0]);
-
-	rdCov[i + j*n] = REAL(dkernValue)[iindex]; 
-	rdCov[j + i*n] = rdCov[i + j*n];
+        rdcovx = 0;
+	for (iindex = loweridx; iindex < upperidx; iindex++) {
+	  rdCov[i + j*n + rdcovx * nsquared] = REAL(dkernValue)[iindex]; 
+	  rdCov[j + i*n + rdcovx * nsquared] = rdCov[i + j*n + rdcovx * nsquared];
+	  rdcovx++;
+        }
       }
-      
     }
     
     // attribut "gradient" de 'Cov'.

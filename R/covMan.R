@@ -97,7 +97,7 @@ setMethod("covMat",
               }
               
               if (compGrad) {
-                  if ((index < 1L) || (index > object@parN)) {
+                  if ((index != -1) && ((index != -1) && ((index < 1L) || (index > object@parN)))) {
                       warning("Bad index passed to 'covMat' with 'gradComp = TRUE'. ",
                               "Setting 'gradComp' to FALSE.")
                   }
@@ -116,6 +116,12 @@ setMethod("covMat",
                   Cov <- .Call("covMatMat_covMan", kernFun, t(X), t(Xnew), par, 
                                compGrad, index, rho)
               }          
+              if (compGrad && index == -2) {
+                attr(Cov, "gradient") <- array(attr(Cov, "gradient"),
+                  dim = c(nrow(X), nrow(X), object@parN),
+                  dimnames = list(NULL, NULL, object@kernParNames))
+
+              }  
               return(Cov) 
               
           })
