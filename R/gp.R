@@ -76,9 +76,9 @@ gp <- function(formula, data,
             }
         }
         
-        fit <- try(mle(object = cov,
+        fit <- mle(object = cov,
                        y = y, X = X, F = F,
-                       ...))
+                       ...)
 
         if (inherits(fit, "try-error")) stop("Maximum Likelihood error")
         optValue <- fit$opt$val
